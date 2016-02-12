@@ -1,0 +1,59 @@
+<td> {{resource.name}} </td>
+
+<td>
+    {{file-input file=file disabled=disabledFileInput onChange='submit'}}
+</td>
+
+<td>
+{{#if isLoading}}
+    {{#if resource.validating}}
+        <p>validating...</p>
+    {{else if resource.importing}}
+        <p>importing...</p>
+    {{else}}
+        <p>uploading...</p>
+    {{/if}}
+{{else if resource.status}}
+    <button class="btn btn-default" {{action 'reset'}}>reset</button>
+{{else}}
+    {{#if file}}
+        <button class="btn btn-primary" {{action 'submit'}}>validate</button>
+    {{/if}}
+    <button class="btn btn-default" {{action 'skip'}}>skip</button>
+{{/if}}
+</td>
+
+
+<td>
+{{#if resource.progress}}
+
+    {{resource.progress}}%
+
+    <!-- <div class="progress">
+        <div class="progress-bar" role="progressbar"
+            aria-valuenow="{{resource.progress}}"
+            aria-valuemin="0" aria-valuemax="100"
+            style="width: {{resource.progress}}%;">
+                {{resource.progress}}%
+        </div>
+    </div> -->
+
+{{else if resource.status}}
+    {{#if error}}
+        <div class="error">
+            {{#if error.lineNumber}}
+                Error at line {{error.lineNumber}}:
+            {{/if}}
+            <samp>{{error.message}}</samp>
+        </div>
+    {{else if resource.importing}}
+        &nbsp;
+    {{else if resource.validated}}
+        ok
+    {{else if resource.imported}}
+        imported with success
+    {{else}}
+        {{resource.status}}
+    {{/if}}
+{{/if}}
+</td>

@@ -1,0 +1,66 @@
+
+{{#if connectionLost}}
+    <div class="alert alert-danger" role="alert">
+        <h2>Unable to reach the server</h2>
+        <p>Are you connected to internet ?</p>
+    </div>
+{{/if}}
+
+<table class="table table-hover">
+    <tbody>
+        {{#each resources as |resource|}}
+            {{resource-csv-upload resource=resource}}
+        {{/each}}
+    </tbody>
+</table>
+
+<button
+    class="btn {{unless isUploading 'btn-primary'}}"
+    {{action 'upload'}}
+    disabled="{{unless isReadyForUpload 'disabled'}}">
+
+    {{#if isImporting}}
+        importing...
+    {{else}}
+        import data
+    {{/if}}
+</button>
+
+
+<!-- {{#if isLoading}}
+    <button class="btn btn-default" disabled="disabled"> uploading... </button>
+{{/if}} -->
+
+<!-- {{#if isLoading}}
+    <button class="btn btn-default" disabled="disabled"> uploading... </button>
+{{else if error}}
+    <p> arf some error <samp>{{error.message}}: {{error.details}}</samp></p>
+{{else if complete}}
+    <div>
+        <div class="panel panel-{{if error 'danger' 'success'}}">
+            <div class="panel-heading">
+                <h3 class="panel-title">
+                    {{#if error}}
+                        Arg !
+                    {{else}}
+                        Upload started
+                    {{/if}}
+                </h3>
+            </div>
+            <div class="panel-body">
+                {{#if error}}
+                    <samp>{{error.message}}:{{error.detail}}</samp>
+                {{else}}
+                    <p>Please, follow the progress at <a href="http://process.ceropath.org" target="_blank">http://process.ceropath.org</a> </p>
+                {{/if}}
+            </div>
+        </div>
+    </div>
+{{else}}
+    <button
+        class="btn btn-primary"
+        {{action 'upload'}}
+        disabled="{{unless isReadyForUpload 'disabled'}}">
+            upload
+    </button>
+{{/if}} -->
