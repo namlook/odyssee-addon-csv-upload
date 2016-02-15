@@ -9,6 +9,8 @@ var uuid = require('uuid');
 
 module.exports = function(server) {
 
+    var socket = server.plugins.eureka.websocket;
+
     return {
 
         listResources: {
@@ -88,51 +90,99 @@ module.exports = function(server) {
 
                 request.payload.file.on('end', function() {
 
-                    var importCsvTask = server.plugins.eureka.tasks['import-csv'];
-                    var task = importCsvTask({
+                    server.plugins.eureka.tasks.enqueue('import-csv', {
                         title: resource,
                         filename: csvFileName,
                         resource: modelName,
                         delimiter: request.query.delimiter,
                         escapeChar: request.query.escapeChar,
                         enclosedChar: request.query.enclosedChar
-                    });
+                    }, function(err, job) {
 
-                    var socket = server.plugins.eureka.websocket;
+                        if (err) {
+                            return reply.implementationError(err);
+                        }
 
-                    task.on('enqueue', function(){
-                        socket.emit('upload-csv', {
-                            status: 'importing',
-                            resource: resource
+                        job.on('enqueue', function(){
+                            socket.emit('upload-csv', {
+                                status: 'importing',
+                                resource: resource
+                            });
+                            reply('ok');
                         });
-                        reply('ok');
-                    });
 
-                    task.on('failed', function(err) {
-                        console.log('xxxxxx', err);
-                        socket.emit('upload-csv', {
-                            status: 'error',
-                            resource: resource,
-                            error: JSON.stringify({
-                                message: err
-                            })
+                        job.on('failed', function(err) {
+                            console.log('xxxxxx', err);
+                            socket.emit('upload-csv', {
+                                status: 'error',
+                                resource: resource,
+                                error: JSON.stringify({
+                                    message: err
+                                })
+                            });
+                        });
+
+                        job.on('complete', function(job){
+                            socket.emit('upload-csv', {
+                                status: 'imported',
+                                resource: resource
+                            });
+                        });
+
+                        job.on('progress', function(progress) {
+                            socket.emit('upload-csv', {
+                                status: 'progress',
+                                resource: resource,
+                                progress: progress
+                            });
                         });
                     });
 
-                    task.on('complete', function(job){
-                        socket.emit('upload-csv', {
-                            status: 'imported',
-                            resource: resource
-                        });
-                    });
-
-                    task.on('progress', function(progress) {
-                        socket.emit('upload-csv', {
-                            status: 'progress',
-                            resource: resource,
-                            progress: progress
-                        });
-                    });
+                    // var importCsvTask = server.plugins.eureka.tasks['import-csv'];
+                    // var task = importCsvTask({
+                    //     title: resource,
+                    //     filename: csvFileName,
+                    //     resource: modelName,
+                    //     delimiter: request.query.delimiter,
+                    //     escapeChar: request.query.escapeChar,
+                    //     enclosedChar: request.query.enclosedChar
+                    // });
+                    //
+                    // var socket = server.plugins.eureka.websocket;
+                    //
+                    // task.on('enqueue', function(){
+                    //     socket.emit('upload-csv', {
+                    //         status: 'importing',
+                    //         resource: resource
+                    //     });
+                    //     reply('ok');
+                    // });
+                    //
+                    // task.on('failed', function(err) {
+                    //     console.log('xxxxxx', err);
+                    //     socket.emit('upload-csv', {
+                    //         status: 'error',
+                    //         resource: resource,
+                    //         error: JSON.stringify({
+                    //             message: err
+                    //         })
+                    //     });
+                    // });
+                    //
+                    // task.on('complete', function(job){
+                    //     socket.emit('upload-csv', {
+                    //         status: 'imported',
+                    //         resource: resource
+                    //     });
+                    // });
+                    //
+                    // task.on('progress', function(progress) {
+                    //     socket.emit('upload-csv', {
+                    //         status: 'progress',
+                    //         resource: resource,
+                    //         progress: progress
+                    //     });
+                    // });
                 });
             }
         },
@@ -192,58 +242,110 @@ module.exports = function(server) {
 
                 request.payload.file.on('end', function() {
 
-                    var socket = server.plugins.eureka.websocket;
-
-                    var validateCsvTask = server.plugins.eureka.tasks['validate-csv'];
-
-                    var task = validateCsvTask({
-
+                    server.plugins.eureka.tasks.enqueue('validate-csv', {
                         title: resource,
                         filename: csvFileName,
                         resource: modelName,
                         delimiter: request.query.delimiter,
                         escapeChar: request.query.escapeChar,
                         enclosedChar: request.query.enclosedChar
+                    }, function(err, job) {
+                        if (err) {
+                            return reply.implementationError(err);
+                        }
 
+                        job.on('enqueue', function(job){
+                            socket.emit('upload-csv', {
+                                status: 'validating',
+                                resource: resource
+                            });
+                            reply('ok');
 
-                    }).on('enqueue', function(job){
-                        socket.emit('upload-csv', {
-                            status: 'validating',
-                            resource: resource
+                        }).on('failed attempt', function(err) {
+
+                            console.log('xxxattemptxxx', err);
+                            socket.emit('upload-csv', {
+                                status: 'error',
+                                resource: resource,
+                                error: err
+                            });
+
+                        }).on('failed', function(err) {
+
+                            console.log('xxxxxx', err);
+                            socket.emit('upload-csv', {
+                                status: 'error',
+                                resource: resource,
+                                error: err
+                            });
+
+                        }).on('complete', function(job){
+                            socket.emit('upload-csv', {
+                                status: 'validated',
+                                resource: resource
+                            });
+
+                        }).on('progress', function(progress) {
+                            socket.emit('upload-csv', {
+                                status: 'progress',
+                                resource: resource,
+                                progress: progress
+                            });
                         });
-                        reply('ok');
 
-                    }).on('failed attempt', function(err) {
 
-                        console.log('xxxattemptxxx', err);
-                        socket.emit('upload-csv', {
-                            status: 'error',
-                            resource: resource,
-                            error: err
-                        });
-
-                    }).on('failed', function(err) {
-
-                        console.log('xxxxxx', err);
-                        socket.emit('upload-csv', {
-                            status: 'error',
-                            resource: resource,
-                            error: err
-                        });
-
-                    }).on('complete', function(job){
-                        socket.emit('upload-csv', {
-                            status: 'validated',
-                            resource: resource
-                        });
-
-                    }).on('progress', function(progress) {
-                        socket.emit('upload-csv', {
-                            status: 'progress',
-                            resource: resource,
-                            progress: progress
-                        });
                     });
+
+                    // var validateCsvTask = server.plugins.eureka.tasks['validate-csv'];
+                    //
+                    // var task = validateCsvTask({
+                    //
+                    //     title: resource,
+                    //     filename: csvFileName,
+                    //     resource: modelName,
+                    //     delimiter: request.query.delimiter,
+                    //     escapeChar: request.query.escapeChar,
+                    //     enclosedChar: request.query.enclosedChar
+                    //
+                    //
+                    // }).on('enqueue', function(job){
+                    //     socket.emit('upload-csv', {
+                    //         status: 'validating',
+                    //         resource: resource
+                    //     });
+                    //     reply('ok');
+                    //
+                    // }).on('failed attempt', function(err) {
+                    //
+                    //     console.log('xxxattemptxxx', err);
+                    //     socket.emit('upload-csv', {
+                    //         status: 'error',
+                    //         resource: resource,
+                    //         error: err
+                    //     });
+                    //
+                    // }).on('failed', function(err) {
+                    //
+                    //     console.log('xxxxxx', err);
+                    //     socket.emit('upload-csv', {
+                    //         status: 'error',
+                    //         resource: resource,
+                    //         error: err
+                    //     });
+                    //
+                    // }).on('complete', function(job){
+                    //     socket.emit('upload-csv', {
+                    //         status: 'validated',
+                    //         resource: resource
+                    //     });
+                    //
+                    // }).on('progress', function(progress) {
+                    //     socket.emit('upload-csv', {
+                    //         status: 'progress',
+                    //         resource: resource,
+                    //         progress: progress
+                    //     });
+                    // });
 
                 });
             }
